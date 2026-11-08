@@ -1,6 +1,6 @@
 # llm-watch
 
-Live demo: LIVE_DEMO_URL (synthetic data, static build)
+Live demo: [https://llm-watch.kfairley9999.workers.dev](https://llm-watch.kfairley9999.workers.dev) (synthetic data, static build)
 
 A local flight recorder for OpenAI-compatible calls, plus a regression gate for model swaps.
 
@@ -201,7 +201,7 @@ npm run build:demo
 python -m llmwatch.cli export-demo dashboard/public/demo/
 ```
 
-`dashboard/wrangler.jsonc` is a static-assets Worker named `llm-watch`. `assets.not_found_handling` is `single-page-application`, so a hard refresh on `/calls/...` or `/evals/...` still loads the app. After the demo build, the site is `dashboard/dist`. Deploy it yourself from `dashboard/` with `npx wrangler deploy`. Cloudflare Pages treats a site with no top-level `404.html` as a single-page app and serves the root document for unknown paths, so the same directory works there too. This repo does not deploy it. Replace `LIVE_DEMO_URL` above once the host is live.
+`dashboard/wrangler.jsonc` is a static-assets Worker named `llm-watch`. `assets.not_found_handling` is `single-page-application`, so a hard refresh on `/calls/...` or `/evals/...` still loads the app. After the demo build, the site is `dashboard/dist`. Deploy it yourself from `dashboard/` with `npx wrangler deploy`. Cloudflare Pages treats a site with no top-level `404.html` as a single-page app and serves the root document for unknown paths, so the same directory works there too. This repo does not deploy it. The public demo is live at https://llm-watch.kfairley9999.workers.dev.
 
 `render.yaml` remains a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so that static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth.
 
