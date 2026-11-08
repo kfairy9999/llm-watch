@@ -102,7 +102,7 @@ def test_export_demo_without_a_database_seeds_one(tmp_path):
 
 def test_static_demo_wiring():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "Live demo: LIVE_DEMO_URL (synthetic data, static build)" in readme
+    assert "Live demo: [https://llm-watch.kfairley9999.workers.dev](https://llm-watch.kfairley9999.workers.dev) (synthetic data, static build)" in readme
     assert "VITE_DEMO_STATIC" in readme
     assert "wrangler.jsonc" in readme
     assert "npm run build:demo" in readme
