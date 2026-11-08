@@ -186,6 +186,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs both jobs.
 
 Not deployed. `render.yaml` is a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so the static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth.
 
+## How it was built
+
+I designed and directed this project and built it with AI coding agents: I set the requirements (record every call with real token costs, gate model swaps on a real eval instead of vibes, and label all demo data as synthetic), reviewed the results, and drove the fixes.
+
 ## What I learned
 
 Pair the deltas before you bootstrap. The same item is hard for both models, so the unit of analysis is `score_B - score_A`, not two independent means. A pass-to-fail flip is a better CI signal than a tiny mean drop, and the interval stops one noisy item from failing the build by itself. It is still not a multiple-comparisons correction.
