@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Static-assets Worker for the public demo. No script, bindings, or secrets.
+  // https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/
+  "name": "llm-watch",
+  "compatibility_date": "2026-11-08",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths, including a refresh on /calls/:id or /evals/:id, serve index.html.
+    "not_found_handling": "single-page-application"
+  }
+}

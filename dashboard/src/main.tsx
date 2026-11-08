@@ -10,7 +10,9 @@ import "./index.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("missing root element");
 
-await loadConfig();
+if (import.meta.env.VITE_DEMO_STATIC !== "1") {
+  await loadConfig();
+}
 
 createRoot(root).render(
   <StrictMode>

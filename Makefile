@@ -1,6 +1,6 @@
 PY ?= python3
 
-.PHONY: install test test-py test-ui seed serve dev-ui build
+.PHONY: install test test-py test-ui seed serve dev-ui build demo-static
 
 install:
 	$(PY) -m pip install -e ".[dev]"
@@ -25,3 +25,6 @@ dev-ui:
 
 build:
 	cd dashboard && npm run build
+
+demo-static:
+	cd dashboard && npm run build:demo

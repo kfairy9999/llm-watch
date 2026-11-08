@@ -1,4 +1,4 @@
-"""Command line for the ledger, the proxy, and the regression gate."""
+"""Command line for the ledger, the proxy, the regression gate, and the static demo."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import json
 import os
 import sys
 
+from llmwatch.demo_export import export_demo
 from llmwatch.eval.report import render_report
 from llmwatch.eval.runner import compare_runs, run_suite
 from llmwatch.eval.suite import (
@@ -40,6 +41,11 @@ def main(argv: list[str] | None = None) -> int:
     seed.add_argument("--db", default=_default_db())
     seed.add_argument("--force", action="store_true", help="replace an existing ledger")
     seed.set_defaults(func=_cmd_seed)
+
+    export = sub.add_parser("export-demo", help="write static dashboard JSON for the synthetic demo")
+    export.add_argument("out", help="directory for the JSON files, for example dashboard/public/demo")
+    export.add_argument("--db", default=None, help="ledger to export; default seeds a temporary demo")
+    export.set_defaults(func=_cmd_export_demo)
 
     serve = sub.add_parser("serve", help="start the read API")
     serve.add_argument("--db", default=_default_db())
@@ -94,6 +100,12 @@ def main(argv: list[str] | None = None) -> int:
 
 def _cmd_seed(args: argparse.Namespace) -> int:
     result = seed_demo(args.db, force=args.force)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _cmd_export_demo(args: argparse.Namespace) -> int:
+    result = export_demo(args.out, db_path=args.db)
     print(json.dumps(result, indent=2))
     return 0
 
@@ -212,3 +224,7 @@ def _now() -> str:
     from datetime import datetime, timezone
 
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+if __name__ == "__main__":
+    entry()

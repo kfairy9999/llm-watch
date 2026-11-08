@@ -31,8 +31,8 @@ export function Layout() {
   const disclaimer = meta ? meta.disclaimer : SYNTHETIC_DISCLAIMER;
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
-      <aside className="flex items-center gap-4 overflow-x-auto bg-[#1c2421] px-4 py-3 text-[#e7efe9] md:flex-col md:items-stretch md:gap-6 md:px-5 md:py-6">
+    <div className="min-h-screen max-w-full overflow-x-clip md:grid md:grid-cols-[232px_1fr]">
+      <aside className="flex max-w-full flex-col gap-3 bg-[#1c2421] px-4 py-3 text-[#e7efe9] sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-stretch md:gap-6 md:px-5 md:py-6">
         <div className="shrink-0">
           <p className="nums text-[10px] tracking-[0.18em] text-[#9eb0a6] uppercase">Flight recorder</p>
           <p className="font-display text-2xl leading-none text-[#f4f1ea]">llm-watch</p>
@@ -44,7 +44,7 @@ export function Layout() {
               to={link.to}
               end={link.end}
               className={({ isActive }) =>
-                `rounded-md px-3 py-1.5 text-sm ${
+                `inline-flex min-h-11 flex-1 shrink-0 items-center justify-center rounded-md px-3 py-2 text-sm sm:flex-none sm:justify-start md:min-h-0 md:py-1.5 ${
                   isActive ? "bg-[#31443c] text-white" : "text-[#c5d2cb] hover:bg-[#28332e]"
                 }`
               }
@@ -63,7 +63,7 @@ export function Layout() {
       </aside>
       <div className="min-w-0">
         {disclaimer ? <SyntheticBanner disclaimer={disclaimer} /> : null}
-        <main className="px-4 py-6 md:px-8 md:py-8">
+        <main className="min-w-0 px-4 py-5 md:px-8 md:py-8">
           <Outlet context={meta} />
         </main>
       </div>

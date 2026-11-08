@@ -43,7 +43,7 @@ export function Overview() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-4xl tracking-tight">Call ledger</h1>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Call ledger</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Latency percentiles use successful calls only. Cost is the bundled price table applied to stored token counts,
           not a provider invoice.
@@ -59,7 +59,7 @@ export function Overview() {
         </Card>
       ) : (
         <>
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <Stat label="Calls" value={formatTokens(summary.calls)} detail={`${formatTokens(summary.errors)} errors`} />
             <Stat label="Spend" value={formatUsd(summary.cost_usd)} detail="price table, not an invoice" />
             <Stat label="p50 latency" value={formatMs(summary.latency_p50_ms)} detail={`p95 ${formatMs(summary.latency_p95_ms)}`} />
@@ -88,9 +88,9 @@ export function Overview() {
                 {series.models.map((model) => `${shortModel(model)} = ${model}`).join(" · ")}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0">
               <Tabs defaultValue="latency">
-                <TabsList>
+                <TabsList className="max-w-full overflow-x-auto">
                   <TabsTrigger value="latency">Latency</TabsTrigger>
                   <TabsTrigger value="cost">Cost</TabsTrigger>
                   <TabsTrigger value="tokens">Tokens</TabsTrigger>
@@ -129,7 +129,7 @@ export function Overview() {
                 <TableBody>
                   {summary.by_model.map((model) => (
                     <TableRow key={model.model}>
-                      <TableCell className="max-w-[12rem] truncate font-medium">{model.model}</TableCell>
+                      <TableCell className="max-w-[7.5rem] truncate font-medium sm:max-w-[12rem]">{model.model}</TableCell>
                       <TableCell className="nums">{formatTokens(model.calls)}</TableCell>
                       <TableCell className="hidden sm:table-cell">{formatPct(model.error_rate)}</TableCell>
                       <TableCell className="nums">{formatMs(model.latency_p50_ms)}</TableCell>
@@ -153,7 +153,7 @@ function Stat({ label, value, detail }: { label: string; value: string; detail: 
     <Card>
       <CardHeader>
         <CardDescription className="nums text-[11px] tracking-[0.14em] uppercase">{label}</CardDescription>
-        <CardTitle className="nums text-2xl whitespace-nowrap">{value}</CardTitle>
+        <CardTitle className="nums text-xl whitespace-nowrap sm:text-2xl">{value}</CardTitle>
       </CardHeader>
       <CardContent className="text-xs text-muted-foreground">{detail}</CardContent>
     </Card>

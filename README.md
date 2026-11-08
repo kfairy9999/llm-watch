@@ -1,5 +1,7 @@
 # llm-watch
 
+Live demo: LIVE_DEMO_URL (synthetic data, static build)
+
 A local flight recorder for OpenAI-compatible calls, plus a regression gate for model swaps.
 
 Point a client or a tiny proxy at llm-watch and every chat completion lands in SQLite with the model, prompt, response, token counts, latency, and a cost from a price table you control. A YAML suite then scores model A against model B. If the paired bootstrap interval says quality dropped, or a test flips from pass to fail, the CLI exits 1 so CI can block the swap.
@@ -180,11 +182,28 @@ cd dashboard && npm test && npm run build
 
 pytest covers the price formula, Retry-After parsing, the SDK ledger (including "the API key is not in the sqlite file"), the OpenAI-style wrapper, proxy forwarding and SSE assembly, every scorer, bootstrap properties, the demo suite's two verdicts, CLI exit codes, and the API disclaimer. A search for `%` does not become a wildcard. vitest covers formatters, the gate copy, and the synthetic banner.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs both jobs.
+GitHub Actions (`.github/workflows/ci.yml`) runs the Python tests, the dashboard tests, and a static demo build.
 
 ## Deploy
 
-Not deployed. `render.yaml` is a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so the static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth.
+The line under the title is a public demo recruiters can open on a phone. It is a static build of this dashboard. `export-demo` writes the seeded ledger (simulated calls plus the eval comparisons the real runner produces) to JSON, and `VITE_DEMO_STATIC=1` makes the UI read those files instead of calling the API. There is no backend, no API key, and no database. The synthetic-demo banner stays on every page.
+
+```bash
+pip install -e .
+cd dashboard
+npm ci
+npm run build:demo
+```
+
+`npm run build:demo` runs `python3 -m llmwatch.cli export-demo public/demo`, then `vite build` with `VITE_DEMO_STATIC=1`. From the repo root, `make demo-static` does the same thing. Export on its own:
+
+```bash
+python -m llmwatch.cli export-demo dashboard/public/demo/
+```
+
+`dashboard/wrangler.jsonc` is a static-assets Worker named `llm-watch`. `assets.not_found_handling` is `single-page-application`, so a hard refresh on `/calls/...` or `/evals/...` still loads the app. After the demo build, the site is `dashboard/dist`. Deploy it yourself from `dashboard/` with `npx wrangler deploy`. Cloudflare Pages treats a site with no top-level `404.html` as a single-page app and serves the root document for unknown paths, so the same directory works there too. This repo does not deploy it. Replace `LIVE_DEMO_URL` above once the host is live.
+
+`render.yaml` remains a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so that static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth.
 
 ## How it was built
 

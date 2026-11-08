@@ -32,3 +32,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python package
+        working-directory: ${{ github.workspace }}
+        run: pip install -e .
+      - name: Build static demo
+        run: npm run build:demo

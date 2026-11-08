@@ -39,7 +39,7 @@ export function Evals() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="font-display text-4xl tracking-tight">Eval runs</h1>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Eval runs</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Each card is model B minus model A on the same suite. The gate fails on a significant negative mean or any
           pass-to-fail flip.
@@ -50,7 +50,7 @@ export function Evals() {
           <Link key={row.id} to={`/evals/${row.id}`} className="block">
             <Card className={row.failed_gate ? "border-[#e7c4be]" : ""}>
               <CardHeader>
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <CardTitle>{row.name}</CardTitle>
                   {verdictBadge(row)}
                 </div>

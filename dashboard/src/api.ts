@@ -1,6 +1,8 @@
+import { callsQueryFilters, demoAssetPath, filterCalls, type CallSearch } from "@/lib/staticDemo";
 import type {
   CallDetail,
   CallPage,
+  CallSummary,
   ComparisonCard,
   ComparisonDetail,
   Meta,
@@ -38,7 +40,52 @@ export class ApiError extends Error {
   }
 }
 
+const demoStatic = import.meta.env.VITE_DEMO_STATIC === "1";
+
+let ledgerPromise: Promise<{ calls: CallSummary[]; search: CallSearch }> | null = null;
+
+function loadLedger(): Promise<{ calls: CallSummary[]; search: CallSearch }> {
+  if (!ledgerPromise) {
+    ledgerPromise = Promise.all([readJson<CallPage>("/demo/calls.json"), readJson<CallSearch>("/demo/calls-search.json")])
+      .then(([page, search]) => ({ calls: page.calls, search }))
+      .catch((error: unknown) => {
+        ledgerPromise = null;
+        throw error;
+      });
+  }
+  return ledgerPromise;
+}
+
+async function readJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  const body = await response.text();
+  if (!response.ok) {
+    throw new ApiError(response.status, `${response.status} ${response.statusText}`);
+  }
+  // Workers and Pages serve index.html for unknown paths. That is not a call.
+  if (body.trimStart().startsWith("<")) {
+    throw new ApiError(404, "404 Not Found");
+  }
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new ApiError(404, "404 Not Found");
+  }
+}
+
+async function getDemoJson<T>(path: string): Promise<T> {
+  const filters = callsQueryFilters(path);
+  if (filters) {
+    const ledger = await loadLedger();
+    return filterCalls(ledger.calls, ledger.search, filters) as T;
+  }
+  const asset = demoAssetPath(path);
+  if (!asset) throw new ApiError(404, "404 Not Found");
+  return readJson<T>(asset);
+}
+
 export async function getJson<T>(path: string): Promise<T> {
+  if (demoStatic) return getDemoJson<T>(path);
   const response = await fetch(`${apiBase}${path}`);
   if (!response.ok) {
     throw new ApiError(response.status, `${response.status} ${response.statusText}`);

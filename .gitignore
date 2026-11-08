@@ -14,5 +14,6 @@ data/*.db-*
 node_modules/
 dashboard/node_modules/
 dashboard/dist/
+dashboard/public/demo/
 *.log
 .DS_Store

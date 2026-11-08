@@ -73,7 +73,7 @@ export function Calls() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="font-display text-4xl tracking-tight">Calls</h1>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Calls</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Filter the ledger by model, status, or a phrase in the prompt or reply.
         </p>
@@ -84,7 +84,7 @@ export function Calls() {
           onChange={(event) => setQ(event.target.value)}
           placeholder="Search prompts and replies"
           aria-label="Search prompts and replies"
-          className="md:max-w-sm bg-card"
+          className="min-h-11 bg-card text-base md:min-h-8 md:max-w-sm md:text-sm"
         />
         <select
           aria-label="Model"
@@ -93,7 +93,7 @@ export function Calls() {
             setModel(event.target.value);
             setOffset(0);
           }}
-          className="h-8 rounded-lg border border-input bg-card px-2 text-sm"
+          className="h-11 w-full rounded-lg border border-input bg-card px-2 text-base md:h-8 md:w-auto md:text-sm"
         >
           <option value="">All models</option>
           {models.map((item) => (
@@ -109,7 +109,7 @@ export function Calls() {
             setStatus(event.target.value);
             setOffset(0);
           }}
-          className="h-8 rounded-lg border border-input bg-card px-2 text-sm"
+          className="h-11 w-full rounded-lg border border-input bg-card px-2 text-base md:h-8 md:w-auto md:text-sm"
         >
           <option value="">Any status</option>
           <option value="ok">ok</option>
@@ -129,7 +129,30 @@ export function Calls() {
         />
       ) : null}
       {page && page.calls.length > 0 ? (
-        <div className="rounded-xl bg-card ring-1 ring-foreground/10">
+        <>
+          <div className="space-y-2 md:hidden">
+            {page.calls.map((call) => (
+              <Link
+                key={call.id}
+                to={`/calls/${call.id}`}
+                className="block rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-medium">{call.model}</p>
+                  <span className="flex shrink-0 gap-1">
+                    <Badge variant={call.status === "ok" ? "secondary" : "destructive"}>{call.status}</Badge>
+                    {call.synthetic ? <Badge variant="outline">Demo</Badge> : null}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-3 text-sm">{call.prompt_preview || "(empty prompt)"}</p>
+                <p className="nums mt-2 text-xs text-muted-foreground">
+                  {formatTime(call.created_at)} · {formatMs(call.latency_ms)} · {formatUsd(call.cost_usd)}
+                  {call.route ? ` · ${call.route}` : ""}
+                </p>
+              </Link>
+            ))}
+          </div>
+          <div className="hidden rounded-xl bg-card ring-1 ring-foreground/10 md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -169,20 +192,31 @@ export function Calls() {
               ))}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between gap-3 px-3 py-3 text-sm">
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm md:px-3 md:py-3">
             <p className="nums text-muted-foreground">
               {from}–{to} of {total}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>
+              <Button
+                variant="outline"
+                className="min-h-11 md:min-h-8"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - PAGE))}
+              >
                 Previous
               </Button>
-              <Button variant="outline" disabled={offset + PAGE >= total} onClick={() => setOffset(offset + PAGE)}>
+              <Button
+                variant="outline"
+                className="min-h-11 md:min-h-8"
+                disabled={offset + PAGE >= total}
+                onClick={() => setOffset(offset + PAGE)}
+              >
                 Next
               </Button>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );

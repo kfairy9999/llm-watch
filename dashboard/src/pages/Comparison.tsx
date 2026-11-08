@@ -54,7 +54,7 @@ export function Comparison() {
           {row.synthetic ? <Badge variant="outline">synthetic demo</Badge> : null}
           <Badge variant="outline">{row.provenance}</Badge>
         </div>
-        <h1 className="font-display text-3xl tracking-tight md:text-4xl">{row.name}</h1>
+        <h1 className="font-display text-2xl tracking-tight break-words sm:text-3xl md:text-4xl">{row.name}</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">{row.provenance_note}</p>
         {row.narrative ? <p className="max-w-3xl text-sm">{row.narrative}</p> : null}
       </header>
@@ -68,7 +68,42 @@ export function Comparison() {
         <Metric label={costLabel} value={`${formatUsd(row.mean_cost_a)} → ${formatUsd(row.mean_cost_b)}`} />
       </section>
       <p className="text-xs text-muted-foreground">{row.price_note}</p>
-      <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      <div className="space-y-2 md:hidden">
+        {row.tests.map((test) => {
+          const tone = test.flag === "regression" ? "bg-[#fdeceb]" : test.flag === "improvement" ? "bg-[#e7f6ec]" : "bg-card";
+          const expanded = open === test.test_id;
+          return (
+            <article key={test.test_id} className={`rounded-xl ring-1 ring-foreground/10 ${tone}`}>
+              <button
+                type="button"
+                className="w-full px-3 py-3 text-left"
+                onClick={() => setOpen(expanded ? null : test.test_id)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium break-words">{test.test_id}</span>
+                  {test.flag === "unchanged" ? (
+                    <span className="shrink-0 text-xs text-muted-foreground">unchanged</span>
+                  ) : (
+                    <Badge variant={test.flag === "regression" ? "destructive" : "default"}>{test.flag}</Badge>
+                  )}
+                </div>
+                <span className="mt-1 block text-xs text-muted-foreground">{test.description}</span>
+                <span className="nums mt-2 block text-xs">
+                  A {test.score_a.toFixed(3)} · B {test.score_b.toFixed(3)} · {formatDelta(test.delta)}
+                </span>
+              </button>
+              {expanded ? (
+                <div className="space-y-3 px-3 pb-3">
+                  <Output title={row.model_a} text={test.output_a} scorers={test.scorers_a} error={test.error_a} />
+                  <Output title={row.model_b} text={test.output_b} scorers={test.scorers_b} error={test.error_b} />
+                  <p className="text-xs break-words whitespace-pre-wrap text-muted-foreground">{test.prompt}</p>
+                </div>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+      <div className="hidden overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10 md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,7 +168,7 @@ function TestRows({
               <Output title={modelA} text={test.output_a} scorers={test.scorers_a} error={test.error_a} />
               <Output title={modelB} text={test.output_b} scorers={test.scorers_b} error={test.error_b} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground whitespace-pre-wrap">{test.prompt}</p>
+            <p className="mt-3 text-xs break-words whitespace-pre-wrap text-muted-foreground">{test.prompt}</p>
           </TableCell>
         </TableRow>
       ) : null}
@@ -155,7 +190,7 @@ function Output({
   return (
     <div>
       <p className="text-xs font-medium">{title}</p>
-      <pre className="mt-1 max-h-48 overflow-auto text-xs whitespace-pre-wrap">{text || "(empty)"}</pre>
+      <pre className="mt-1 max-h-48 max-w-full overflow-auto text-xs break-words whitespace-pre-wrap">{text || "(empty)"}</pre>
       {error ? <p className="mt-1 text-xs text-[#9f2d20]">{error}</p> : null}
       <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
         {scorers.map((scorer, index) => (
@@ -174,7 +209,7 @@ function Metric({ label, value }: { label: string; value: string }) {
       <CardHeader>
         <CardTitle className="text-xs font-normal text-muted-foreground">{label}</CardTitle>
       </CardHeader>
-      <CardContent className="nums">{value}</CardContent>
+      <CardContent className="nums break-words">{value}</CardContent>
     </Card>
   );
 }

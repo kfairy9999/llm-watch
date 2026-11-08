@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 8492",
     "build": "tsc -b && vite build",
+    "build:demo": "python3 -m llmwatch.cli export-demo public/demo && tsc -b && VITE_DEMO_STATIC=1 vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run"
@@ -39,6 +40,7 @@
     "oxlint": "^1.90.0",
     "typescript": "~7.0.2",
     "vite": "^8.3.6",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
   }
 }

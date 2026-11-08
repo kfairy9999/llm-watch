@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatMs, formatTokens, formatUsd, modelColor, shortModel } from "@/lib/format";
 import type { Timeseries } from "@/types";
@@ -21,19 +22,20 @@ export function TrendChart({ series, metric }: { series: Timeseries; metric: Met
     return row;
   });
   const keys = series.models.map((model) => shortModel(model));
+  const phone = usePhoneWidth();
 
   return (
-    <div className="h-72 w-full">
+    <div className="h-52 w-full min-w-0 sm:h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <LineChart data={rows} margin={{ top: 8, right: phone ? 4 : 8, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#e4dccb" vertical={false} />
-          <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#5e584e" }} tickLine={false} axisLine={false} />
+          <XAxis dataKey="date" tick={{ fontSize: phone ? 10 : 12, fill: "#5e584e" }} tickLine={false} axisLine={false} />
           <YAxis
             domain={[0, "auto"]}
-            tick={{ fontSize: 12, fill: "#5e584e" }}
+            tick={{ fontSize: phone ? 10 : 12, fill: "#5e584e" }}
             tickLine={false}
             axisLine={false}
-            width={64}
+            width={phone ? 58 : 64}
             tickFormatter={(value: number) => formatTick(metric, value)}
           />
           <Tooltip
@@ -56,6 +58,24 @@ export function TrendChart({ series, metric }: { series: Timeseries; metric: Met
       </ResponsiveContainer>
     </div>
   );
+}
+
+function usePhoneWidth(): boolean {
+  const [phone, setPhone] = useState(phoneWidth);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(max-width: 639px)");
+    const update = () => setPhone(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return phone;
+}
+
+function phoneWidth(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(max-width: 639px)").matches;
 }
 
 function formatTick(metric: Metric, value: number): string {

@@ -12,14 +12,21 @@ export function LoadingBlock() {
 }
 
 export function ErrorState({ message }: { message: string }) {
+  const demo = import.meta.env.VITE_DEMO_STATIC === "1";
   return (
     <Card>
       <CardHeader>
-        <CardTitle>The API did not respond</CardTitle>
+        <CardTitle>{demo ? "This page did not load" : "The API did not respond"}</CardTitle>
         <CardDescription>{message}</CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Start the ledger with <code className="nums">llmwatch serve --port 8491</code> and reload this page.
+        {demo ? (
+          "The static demo file for this view is missing. Reload the page."
+        ) : (
+          <>
+            Start the ledger with <code className="nums">llmwatch serve --port 8491</code> and reload this page.
+          </>
+        )}
       </CardContent>
     </Card>
   );
