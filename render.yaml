@@ -1,0 +1,25 @@
+# Deploy-ready blueprint. This repo does not deploy it.
+# The API ledger lives on the container disk unless you attach a volume.
+# Point the dashboard's API_BASE at the API service URL.
+services:
+  - type: web
+    name: llm-watch-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: LLMWATCH_DB
+        value: /data/llmwatch.db
+      - key: LLMWATCH_SEED
+        value: "1"
+      - key: LLMWATCH_CORS
+        value: "*"
+  - type: web
+    name: llm-watch
+    runtime: docker
+    dockerfilePath: ./dashboard/Dockerfile
+    dockerContext: ./dashboard
+    envVars:
+      - key: API_BASE
+        sync: false

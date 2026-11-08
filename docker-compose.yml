@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8491:8491"
+    environment:
+      LLMWATCH_DB: /data/llmwatch.db
+      LLMWATCH_SEED: "1"
+    volumes:
+      - watchdata:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8491/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8492:80"
+    environment:
+      API_BASE: ""
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  watchdata:

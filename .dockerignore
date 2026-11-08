@@ -1,0 +1,11 @@
+.venv
+**/__pycache__
+**/*.pyc
+.git
+node_modules
+dashboard/node_modules
+dashboard/dist
+data
+.pytest_cache
+*.egg-info
+docs/screenshots

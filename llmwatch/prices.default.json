@@ -1,0 +1,12 @@
+{
+  "unit": "USD_per_1M_tokens",
+  "note": "Illustrative USD per 1M tokens, not an invoice. Providers change prices; edit the price table before you rely on it.",
+  "reviewed": "2026-11-08",
+  "models": {
+    "llama-3.1-8b-instant": {"input": 0.05, "output": 0.08},
+    "llama-3.3-70b-versatile": {"input": 0.59, "output": 0.79},
+    "llama-3.2-3b-preview": {"input": 0.02, "output": 0.04},
+    "gpt-4o-mini": {"input": 0.15, "output": 0.6}
+  },
+  "default": {"input": 1.0, "output": 3.0}
+}
