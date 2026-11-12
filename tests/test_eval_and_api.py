@@ -328,6 +328,8 @@ def test_compose_and_workflow_exist():
     assert "pytest" in workflow
     assert "npm test" in workflow
     assert "npm run build" in workflow
+    assert "mongodb" not in workflow.lower()
+    assert "MONGO" not in workflow
 
 
 def test_filters_escape_underscore(tmp_path):

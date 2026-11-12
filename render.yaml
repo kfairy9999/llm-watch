@@ -15,6 +15,12 @@ services:
         value: "1"
       - key: LLMWATCH_CORS
         value: "*"
+      # Optional document ledger. Leave unset to keep SQLite on LLMWATCH_DB.
+      # Do not commit a real URI. This blueprint does not create a cluster.
+      # - key: LLMWATCH_MONGODB_URI
+      #   sync: false
+      # - key: LLMWATCH_MONGODB_DB
+      #   value: llmwatch
   - type: web
     name: llm-watch
     runtime: docker
