@@ -1,12 +1,18 @@
-"""SQLite ledger for calls, eval runs, and comparisons."""
+"""Ledger for calls, eval runs, and comparisons.
+
+SQLite is the default. ``open_store`` uses MongoDB when ``LLMWATCH_MONGODB_URI``
+is set. ``Store(path)`` itself always opens the SQLite file, which is the path
+the local tests and any direct file caller already use.
+"""
 
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator, Protocol
 
 from llmwatch.text import new_id, preview, user_text
 
@@ -86,6 +92,92 @@ CREATE TABLE IF NOT EXISTS eval_comparisons (
 );
 """
 
+MONGODB_URI_ENV = "LLMWATCH_MONGODB_URI"
+MONGODB_DB_ENV = "LLMWATCH_MONGODB_DB"
+DEFAULT_MONGODB_DB = "llmwatch"
+
+
+def call_record(row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one call into the fields both backends store."""
+
+    return {
+        "id": row.get("id") or new_id("call"),
+        "created_at": row["created_at"],
+        "provider": row.get("provider") or "openai-compatible",
+        "model": row["model"],
+        "endpoint": row.get("endpoint") or "/v1/chat/completions",
+        "prompt": row.get("prompt") or [],
+        "response": row.get("response"),
+        "response_text": row.get("response_text") or "",
+        "prompt_tokens": int(row.get("prompt_tokens") or 0),
+        "completion_tokens": int(row.get("completion_tokens") or 0),
+        "total_tokens": int(row.get("total_tokens") or 0),
+        "token_source": row.get("token_source") or "unknown",
+        "latency_ms": float(row.get("latency_ms") or 0),
+        "cost_usd": float(row.get("cost_usd") or 0),
+        "price_source": row.get("price_source") or "default",
+        "status": row["status"],
+        "error_type": row.get("error_type"),
+        "error_message": row.get("error_message"),
+        "http_status": row.get("http_status"),
+        "attempts": int(row.get("attempts") or 1),
+        "synthetic": bool(row.get("synthetic")),
+        "metadata": row.get("metadata") or {},
+        "streaming": bool(row.get("streaming")),
+    }
+
+
+def ensure_comparison_runs(exists: Callable[[str], bool], run_a_id: str, run_b_id: str) -> None:
+    """Reject a comparison unless both runs are already in the ledger."""
+
+    for run_id in (run_a_id, run_b_id):
+        if not run_id or not exists(str(run_id)):
+            raise ValueError(f"eval comparison references unknown run {run_id}")
+
+
+class Ledger(Protocol):
+    """Methods the CLI, dashboard API, and eval gate call on either backend."""
+
+    def migrate(self) -> None: ...
+
+    def clear(self) -> None: ...
+
+    def insert_call(self, row: dict[str, Any]) -> str: ...
+
+    def get_call(self, call_id: str) -> dict[str, Any] | None: ...
+
+    def list_calls(
+        self,
+        *,
+        model: str | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
+        limit: int = 25,
+        offset: int = 0,
+    ) -> tuple[int, list[dict[str, Any]]]: ...
+
+    def distinct_models(self) -> list[str]: ...
+
+    def call_metrics(self) -> list[dict[str, Any]]: ...
+
+    def counts(self) -> dict[str, int]: ...
+
+    def count_calls(self) -> int: ...
+
+    def call_search_index(self) -> dict[str, dict[str, str]]: ...
+
+    def insert_run(self, row: dict[str, Any], results: list[dict[str, Any]]) -> str: ...
+
+    def get_results(self, run_id: str) -> list[dict[str, Any]]: ...
+
+    def insert_comparison(self, row: dict[str, Any]) -> str: ...
+
+    def list_comparisons(self) -> list[dict[str, Any]]: ...
+
+    def get_comparison(self, comparison_id: str) -> dict[str, Any] | None: ...
+
 
 class Store:
     def __init__(self, path: str | Path):
@@ -116,31 +208,31 @@ class Store:
             conn.execute("DELETE FROM calls")
 
     def insert_call(self, row: dict[str, Any]) -> str:
-        call_id = row.get("id") or new_id("call")
+        record = call_record(row)
         payload = {
-            "id": call_id,
-            "created_at": row["created_at"],
-            "provider": row.get("provider") or "openai-compatible",
-            "model": row["model"],
-            "endpoint": row.get("endpoint") or "/v1/chat/completions",
-            "prompt_json": json.dumps(row.get("prompt") or [], ensure_ascii=False),
-            "response_json": _dump(row.get("response")),
-            "response_text": row.get("response_text") or "",
-            "prompt_tokens": int(row.get("prompt_tokens") or 0),
-            "completion_tokens": int(row.get("completion_tokens") or 0),
-            "total_tokens": int(row.get("total_tokens") or 0),
-            "token_source": row.get("token_source") or "unknown",
-            "latency_ms": float(row.get("latency_ms") or 0),
-            "cost_usd": float(row.get("cost_usd") or 0),
-            "price_source": row.get("price_source") or "default",
-            "status": row["status"],
-            "error_type": row.get("error_type"),
-            "error_message": row.get("error_message"),
-            "http_status": row.get("http_status"),
-            "attempts": int(row.get("attempts") or 1),
-            "synthetic": 1 if row.get("synthetic") else 0,
-            "metadata_json": json.dumps(row.get("metadata") or {}, ensure_ascii=False),
-            "streaming": 1 if row.get("streaming") else 0,
+            "id": record["id"],
+            "created_at": record["created_at"],
+            "provider": record["provider"],
+            "model": record["model"],
+            "endpoint": record["endpoint"],
+            "prompt_json": json.dumps(record["prompt"], ensure_ascii=False),
+            "response_json": _dump(record["response"]),
+            "response_text": record["response_text"],
+            "prompt_tokens": record["prompt_tokens"],
+            "completion_tokens": record["completion_tokens"],
+            "total_tokens": record["total_tokens"],
+            "token_source": record["token_source"],
+            "latency_ms": record["latency_ms"],
+            "cost_usd": record["cost_usd"],
+            "price_source": record["price_source"],
+            "status": record["status"],
+            "error_type": record["error_type"],
+            "error_message": record["error_message"],
+            "http_status": record["http_status"],
+            "attempts": record["attempts"],
+            "synthetic": 1 if record["synthetic"] else 0,
+            "metadata_json": json.dumps(record["metadata"], ensure_ascii=False),
+            "streaming": 1 if record["streaming"] else 0,
         }
         columns = ", ".join(payload)
         placeholders = ", ".join(f":{name}" for name in payload)
@@ -149,7 +241,7 @@ class Store:
                 f"INSERT OR REPLACE INTO calls ({columns}) VALUES ({placeholders})",
                 payload,
             )
-        return call_id
+        return record["id"]
 
     def get_call(self, call_id: str) -> dict[str, Any] | None:
         with self.connect() as conn:
@@ -222,6 +314,21 @@ class Store:
         with self.connect() as conn:
             return int(conn.execute("SELECT COUNT(*) AS n FROM calls").fetchone()["n"])
 
+    def call_search_index(self) -> dict[str, dict[str, str]]:
+        """Prompt JSON and response text the calls search matches, keyed by id."""
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT id, prompt_json, response_text FROM calls ORDER BY id"
+            ).fetchall()
+        return {
+            row["id"]: {
+                "prompt_json": row["prompt_json"],
+                "response_text": row["response_text"] or "",
+            }
+            for row in rows
+        }
+
     def insert_run(self, row: dict[str, Any], results: list[dict[str, Any]]) -> str:
         run_id = row["id"]
         with self.connect() as conn:
@@ -289,6 +396,15 @@ class Store:
     def insert_comparison(self, row: dict[str, Any]) -> str:
         summary = row["summary"]
         with self.connect() as conn:
+            ensure_comparison_runs(
+                lambda run_id: conn.execute(
+                    "SELECT 1 FROM eval_runs WHERE id = ?",
+                    (run_id,),
+                ).fetchone()
+                is not None,
+                row["run_a_id"],
+                row["run_b_id"],
+            )
             conn.execute("DELETE FROM eval_comparisons WHERE id = ?", (row["id"],))
             conn.execute(
                 """
@@ -331,7 +447,31 @@ class Store:
         return summary
 
 
-def call_to_dict(row: sqlite3.Row, *, detail: bool) -> dict[str, Any]:
+def open_store(path: str | Path | None = None, *, client: Any = None) -> Ledger:
+    """Open the ledger the CLI, API, proxy, and SDK write to.
+
+    ``LLMWATCH_MONGODB_URI`` selects MongoDB. ``LLMWATCH_MONGODB_DB`` is the
+    database name (default ``llmwatch``). With no URI, this opens the SQLite
+    file at ``path``, or ``LLMWATCH_DB`` (default ``data/llmwatch.db``).
+
+    ``client`` is a pymongo-compatible client for tests. It is used only when
+    the URI is set, so the suite never dials a real cluster.
+    """
+
+    uri = os.environ.get(MONGODB_URI_ENV, "").strip()
+    if uri:
+        from llmwatch.mongo_store import MongoStore
+
+        database = os.environ.get(MONGODB_DB_ENV, "").strip() or DEFAULT_MONGODB_DB
+        return MongoStore(uri, database=database, client=client)
+    if client is not None:
+        raise ValueError("client is only used with LLMWATCH_MONGODB_URI")
+    if path is None:
+        path = os.environ.get("LLMWATCH_DB", "data/llmwatch.db")
+    return Store(path)
+
+
+def call_to_dict(row: Any, *, detail: bool) -> dict[str, Any]:
     messages = json.loads(row["prompt_json"])
     metadata = json.loads(row["metadata_json"] or "{}")
     synthetic = bool(row["synthetic"])
@@ -368,7 +508,7 @@ def call_to_dict(row: sqlite3.Row, *, detail: bool) -> dict[str, Any]:
     return data
 
 
-def _result_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+def _result_to_dict(row: Any) -> dict[str, Any]:
     return {
         "id": row["id"],
         "run_id": row["run_id"],
@@ -388,7 +528,7 @@ def _result_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def _comparison_card(row: sqlite3.Row) -> dict[str, Any]:
+def _comparison_card(row: Any) -> dict[str, Any]:
     summary = json.loads(row["summary_json"])
     keep = (
         "name",

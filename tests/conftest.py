@@ -10,6 +10,13 @@ def price_table():
     return load_price_table()
 
 
+@pytest.fixture(autouse=True)
+def mongodb_uri_off_unless_opted_in(monkeypatch):
+    """Keep the existing suite on SQLite even if a developer exported a URI."""
+
+    monkeypatch.delenv("LLMWATCH_MONGODB_URI", raising=False)
+
+
 def sample_call(**overrides):
     row = {
         "id": "call_test",
