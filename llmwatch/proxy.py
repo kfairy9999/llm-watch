@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from llmwatch.pricing import PriceTable, load_price_table
 from llmwatch.record import assemble_call, provider_error_message
 from llmwatch.retry import send_with_retries
-from llmwatch.store import Store
+from llmwatch.store import Ledger, open_store
 from llmwatch.text import response_text, sse_content
 
 HOP_HEADERS = {"host", "content-length", "authorization", "user-agent", "connection", "transfer-encoding"}
@@ -58,7 +58,7 @@ def create_proxy_app(
     rng: random.Random | None = None,
 ) -> FastAPI:
     table = price_table or load_price_table()
-    store = Store(db_path)
+    store = open_store(db_path)
     store.migrate()
     http = httpx.Client(transport=transport, timeout=timeout)
     app = FastAPI(title="llm-watch proxy")
@@ -99,7 +99,7 @@ def forward_request(
     incoming_headers: dict[str, str],
     upstream: str,
     http: httpx.Client,
-    store: Store,
+    store: Ledger,
     user_agent: str,
     api_key: str | None,
     price_table: PriceTable,
@@ -170,7 +170,7 @@ def _json_or_none(body: bytes) -> dict | None:
 
 def _record_proxy_exchange(
     *,
-    store: Store,
+    store: Ledger,
     price_table: PriceTable,
     provider: str,
     payload: dict,

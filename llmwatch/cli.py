@@ -21,7 +21,7 @@ from llmwatch.notice import __version__
 from llmwatch.pricing import load_price_table
 from llmwatch.providers import fixture_completion_fn, groq_completion_fn
 from llmwatch.seed import seed_demo
-from llmwatch.store import Store
+from llmwatch.store import open_store
 from llmwatch.text import new_id
 
 
@@ -151,7 +151,7 @@ def _cmd_price(args: argparse.Namespace) -> int:
 def _cmd_eval_run(args: argparse.Namespace) -> int:
     suite, fingerprint = load_suite(args.suite)
     table = load_price_table()
-    store = Store(args.db)
+    store = open_store(args.db)
     store.migrate()
     if args.provider == "fixture":
         fixture_path = args.fixture or str(bundled_fixtures("customer_support"))

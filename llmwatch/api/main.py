@@ -1,4 +1,8 @@
-"""Read API for the dashboard. Writes happen through the SDK, proxy, and CLI."""
+"""Read API for the dashboard. Writes happen through the SDK, proxy, and CLI.
+
+The ledger is SQLite unless ``LLMWATCH_MONGODB_URI`` is set on this process.
+The browser never receives that URI.
+"""
 
 from __future__ import annotations
 
@@ -12,14 +16,14 @@ from llmwatch.api.metrics import summarize, timeseries
 from llmwatch.notice import DEMO_DATASET, DEMO_FROZEN_AT, __version__, disclaimer_for
 from llmwatch.pricing import load_price_table
 from llmwatch.seed import seed_demo
-from llmwatch.store import Store
+from llmwatch.store import open_store
 
 
 def create_app(db_path: str | Path | None = None, seed: bool | None = None) -> FastAPI:
     path = Path(db_path or os.environ.get("LLMWATCH_DB", "data/llmwatch.db"))
     if seed is None:
         seed = os.environ.get("LLMWATCH_SEED", "1") != "0"
-    store = Store(path)
+    store = open_store(path)
     store.migrate()
     if seed:
         seed_demo(path, force=False)

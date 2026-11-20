@@ -19,7 +19,7 @@ from llmwatch.notice import DEMO_FROZEN_AT, DEMO_SEED
 from llmwatch.pricing import PriceTable, load_price_table
 from llmwatch.providers import fixture_completion_fn
 from llmwatch.record import assemble_call
-from llmwatch.store import Store
+from llmwatch.store import Ledger, open_store
 
 CALL_COUNT = 180
 FROZEN = datetime(2026, 11, 8, tzinfo=timezone.utc)
@@ -66,7 +66,7 @@ ERRORS = [
 
 def seed_demo(db_path: str | Path, *, force: bool = False) -> dict:
     path = Path(db_path)
-    store = Store(path)
+    store = open_store(path)
     store.migrate()
     if not force and store.count_calls() > 0:
         counts = store.counts()
@@ -175,7 +175,7 @@ def _build_calls(price_table: PriceTable) -> list[dict]:
     return ordered
 
 
-def _build_evals(store: Store, price_table: PriceTable) -> list[dict]:
+def _build_evals(store: Ledger, price_table: PriceTable) -> list[dict]:
     suite_path = bundled_suite("customer_support")
     suite, fingerprint = load_suite(suite_path)
     fixtures = load_fixtures(bundled_fixtures("customer_support"))

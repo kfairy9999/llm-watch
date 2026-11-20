@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 
 from llmwatch.api.main import create_app
 from llmwatch.seed import seed_demo
-from llmwatch.store import Store
+from llmwatch.store import Ledger, open_store
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
@@ -88,25 +88,15 @@ def filter_calls(
     }
 
 
-def search_index(store: Store) -> dict[str, dict[str, str]]:
+def search_index(store: Ledger) -> dict[str, dict[str, str]]:
     """Columns the calls query searches, keyed by call id."""
 
-    with store.connect() as conn:
-        rows = conn.execute(
-            "SELECT id, prompt_json, response_text FROM calls ORDER BY id"
-        ).fetchall()
-    return {
-        row["id"]: {
-            "prompt_json": row["prompt_json"],
-            "response_text": row["response_text"] or "",
-        }
-        for row in rows
-    }
+    return store.call_search_index()
 
 
 def _export(db_path: Path, out: Path) -> dict:
     _prepare(out)
-    store = Store(db_path)
+    store = open_store(db_path)
     app = create_app(db_path, seed=False)
     with TestClient(app) as client:
         meta = _get(client, "/api/meta")

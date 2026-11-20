@@ -13,7 +13,7 @@ from llmwatch.errors import WatchError, WatchProviderError
 from llmwatch.pricing import PriceTable, load_price_table
 from llmwatch.record import assemble_call, provider_error_message
 from llmwatch.retry import send_with_retries
-from llmwatch.store import Store
+from llmwatch.store import open_store
 from llmwatch.text import coerce_response
 
 DEFAULT_USER_AGENT = "llm-watch/0.1.0"
@@ -53,10 +53,11 @@ class Chat:
 
 
 class WatchClient:
-    """Small OpenAI-compatible chat client that writes every call to SQLite.
+    """Small OpenAI-compatible chat client that writes every call to the ledger.
 
-    Retries 429 and 503. A Retry-After header, delta-seconds or HTTP-date, wins
-    over exponential backoff. The configured User-Agent is sent on every attempt.
+    The ledger is the SQLite file at ``db_path`` unless ``LLMWATCH_MONGODB_URI``
+    is set. Retries 429 and 503. A Retry-After header, delta-seconds or HTTP-date,
+    wins over exponential backoff. The configured User-Agent is sent on every attempt.
     """
 
     def __init__(
@@ -86,7 +87,7 @@ class WatchClient:
         self.rng = rng or random.Random()
         self.synthetic = synthetic
         self.price_table = price_table or load_price_table()
-        self.store = Store(db_path)
+        self.store = open_store(db_path)
         self.store.migrate()
         self.chat = Chat(self)
         self._http = httpx.Client(transport=transport, timeout=timeout)
@@ -236,14 +237,14 @@ def watch(
     metadata: dict | None = None,
     synthetic: bool = False,
 ) -> Any:
-    """Patch `client.chat.completions.create` so each call is written to SQLite.
+    """Patch `client.chat.completions.create` so each call is written to the ledger.
 
     Works with the official OpenAI SDK or any object that returns a dict or a
     pydantic model from `chat.completions.create`. The original response object
     is returned unchanged.
     """
     table = price_table or load_price_table()
-    store = Store(db_path)
+    store = open_store(db_path)
     store.migrate()
     original = client.chat.completions.create
     base_metadata = dict(metadata or {})

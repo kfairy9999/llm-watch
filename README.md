@@ -4,7 +4,7 @@ Live demo: [https://llm-watch.kfairley9999.workers.dev](https://llm-watch.kfairl
 
 A local flight recorder for OpenAI-compatible calls, plus a regression gate for model swaps.
 
-Point a client or a tiny proxy at llm-watch and every chat completion lands in SQLite with the model, prompt, response, token counts, latency, and a cost from a price table you control. A YAML suite then scores model A against model B. If the paired bootstrap interval says quality dropped, or a test flips from pass to fail, the CLI exits 1 so CI can block the swap.
+Point a client or a tiny proxy at llm-watch and every chat completion lands in a ledger with the model, prompt, response, token counts, latency, and a cost from a price table you control. The ledger is a SQLite file unless you set a MongoDB URI. A YAML suite then scores model A against model B. If the paired bootstrap interval says quality dropped, or a test flips from pass to fail, the CLI exits 1 so CI can block the swap.
 
 The dashboard in this repo is running on **synthetic demo data**. Northline Audio is fictional. The call traffic, timestamps, token counts, and latencies are simulated. Dollar figures are the bundled price table applied to those tokens. Eval scores are the real runner grading checked-in answers, which is why the UI works with no API key. Nothing on that screen is a live provider trace or a benchmark claim.
 
@@ -38,7 +38,7 @@ flowchart LR
   sdk[llm-watch SDK]
   proxy[HTTP proxy]
   provider[OpenAI-compatible API]
-  db[(SQLite ledger)]
+  db[(SQLite or MongoDB)]
   runner[Eval runner]
   api[FastAPI]
   ui[React dashboard]
@@ -54,6 +54,8 @@ flowchart LR
   api --> db
   ui --> api
 ```
+
+SQLite is the default file. MongoDB is used only when `LLMWATCH_MONGODB_URI` is set on the process that writes the ledger. The static dashboard does not open either database.
 
 The gate is deliberately small:
 
@@ -151,6 +153,38 @@ Provider `usage` is stored as `token_source=provider`. If usage is missing, toke
 
 `examples/groq_watch.py` builds the Groq client from `GROQ_API_KEY`. Tests never call Groq. They inject a mock transport into `build_client()` and check the User-Agent plus a 429 that honors `Retry-After: 0`.
 
+## MongoDB
+
+SQLite stays the default. The CLI, the local API, and the eval gate use `LLMWATCH_DB` (default `data/llmwatch.db`) and do not need MongoDB installed.
+
+Set `LLMWATCH_MONGODB_URI` when you want each call stored as a document. A free Atlas M0 cluster is enough. This repo does not create an account, turn on billing, or ship a cluster. Put the URI in the environment of the API, the proxy, or the CLI. Do not put it in the dashboard, a frontend env var, or git.
+
+```bash
+pip install "llm-watch[mongodb]"
+export LLMWATCH_MONGODB_URI='mongodb+srv://USER:PASSWORD@cluster.example.mongodb.net'
+export LLMWATCH_MONGODB_DB=llmwatch
+llmwatch serve
+```
+
+`LLMWATCH_MONGODB_DB` is optional and defaults to `llmwatch`. That variable is the database name, not a path inside the URI. When the URI is set, `--db` and `db_path` are still accepted and are not opened. When the URI is unset, the SQLite file is used, same as before.
+
+`Store(path)` still opens that file even if the URI is set. The CLI, `llmwatch serve`, the proxy, `WatchClient`, and `watch()` call `open_store()`, which is what reads the URI.
+
+Collections, one document per row. `_id` is the existing string id (`call_…`, `run_…`, `res_…`, `cmp_…` from `new_id`, or the id you pass). It is not an ObjectId.
+
+- `calls` — provider, model, endpoint, prompt (messages), response, response_text, prompt_tokens, completion_tokens, total_tokens, token_source, latency_ms, cost_usd, price_source, status, error_type, error_message, http_status, attempts, synthetic, streaming, metadata, created_at
+- `eval_runs` — suite_name, suite_fingerprint, model, label, synthetic, provenance, mean_score, pass_rate, n_tests, summary, created_at
+- `eval_results` — run_id, test_id, description, prompt, output, score, passed, scorers, latency_ms, cost_usd, prompt_tokens, completion_tokens, metrics_simulated, error
+- `eval_comparisons` — suite_name, run_a_id, run_b_id, synthetic, significant_regression, summary, created_at
+
+A result's `run_id` is an `eval_runs` `_id`. A comparison points at two runs. Both backends reject a comparison that names a missing run. SQLite also foreign-keys `eval_results.run_id`. MongoDB writes the run before its results and stamps that run id on each result.
+
+Prompt, response, and metadata are nested fields. They are not JSON text stuffed into a string column.
+
+The eval CI gate stays offline. GitHub Actions runs pytest on SQLite and on an in-memory Mongo stand-in. It does not need Atlas or a secret.
+
+The published dashboard is a static Worker. It reads exported JSON, not MongoDB, and it has no database secret. Point a self-hosted dashboard at the API if those screens should show the MongoDB ledger. The browser only talks to the API. The URI stays on the server.
+
 ## Eval gate
 
 Suites live in `llmwatch/suites/`. The demo suite is an instruction-following gate: the fact is in the prompt, and the scorer checks that the model kept the fact and the format. It is not a knowledge benchmark.
@@ -180,7 +214,7 @@ pytest
 cd dashboard && npm test && npm run build
 ```
 
-pytest covers the price formula, Retry-After parsing, the SDK ledger (including "the API key is not in the sqlite file"), the OpenAI-style wrapper, proxy forwarding and SSE assembly, every scorer, bootstrap properties, the demo suite's two verdicts, CLI exit codes, and the API disclaimer. A search for `%` does not become a wildcard. vitest covers formatters, the gate copy, and the synthetic banner.
+pytest covers the price formula, Retry-After parsing, the SDK ledger (including "the API key is not in the sqlite file"), the OpenAI-style wrapper, proxy forwarding and SSE assembly, every scorer, bootstrap properties, the demo suite's two verdicts, CLI exit codes, and the API disclaimer. A search for `%` does not become a wildcard. The dev extra installs mongomock, and the MongoDB tests run in-process. They do not open a socket and they do not need a URI. vitest covers formatters, the gate copy, and the synthetic banner.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs the Python tests, the dashboard tests, and a static demo build.
 
@@ -203,7 +237,7 @@ python -m llmwatch.cli export-demo dashboard/public/demo/
 
 `dashboard/wrangler.jsonc` is a static-assets Worker named `llm-watch`. `assets.not_found_handling` is `single-page-application`, so a hard refresh on `/calls/...` or `/evals/...` still loads the app. After the demo build, the site is `dashboard/dist`. Deploy it yourself from `dashboard/` with `npx wrangler deploy`. Cloudflare Pages treats a site with no top-level `404.html` as a single-page app and serves the root document for unknown paths, so the same directory works there too. This repo does not deploy it. The public demo is live at https://llm-watch.kfairley9999.workers.dev.
 
-`render.yaml` remains a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so that static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth.
+`render.yaml` remains a blueprint for two Docker services: the API image (`Dockerfile`) and the dashboard image (`dashboard/Dockerfile`). The dashboard container writes `/config.json` from `API_BASE` at startup, so that static build can point at the API without a rebuild. Same-origin `/api` is the default, which is what nginx does in Compose. SQLite on a free container disk disappears on restart unless you attach a volume. Treat the database file as sensitive. It holds prompts and responses, and this project does not add auth. The Compose file and the API image stay on SQLite. To use MongoDB there, install the `mongodb` extra in your own image and set `LLMWATCH_MONGODB_URI` on the API only.
 
 ## How it was built
 

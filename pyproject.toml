@@ -16,7 +16,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.3"]
+dev = ["pytest>=8.3", "mongomock>=4.3", "pymongo>=4.6"]
+mongodb = ["pymongo>=4.6"]
 
 [project.scripts]
 llmwatch = "llmwatch.cli:entry"

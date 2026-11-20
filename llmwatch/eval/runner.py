@@ -12,7 +12,7 @@ from llmwatch.eval.stats import bootstrap_mean_ci
 from llmwatch.eval.suite import SuiteSpec, TestCase
 from llmwatch.notice import PRICE_NOTE
 from llmwatch.pricing import PriceTable, load_price_table
-from llmwatch.store import Store
+from llmwatch.store import Ledger
 from llmwatch.text import estimate_tokens, render_messages, user_text
 
 CompleteFn = Callable[[str, TestCase], "str | Completion"]
@@ -92,7 +92,7 @@ def run_suite(
     *,
     model: str,
     complete_fn: CompleteFn,
-    store: Store | None,
+    store: Ledger | None,
     run_id: str,
     created_at: str,
     label: str = "",
@@ -124,7 +124,7 @@ def compare_runs(
     run_a: Run,
     run_b: Run,
     *,
-    store: Store | None,
+    store: Ledger | None,
     comparison_id: str,
     created_at: str,
     name: str,

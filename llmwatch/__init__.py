@@ -3,7 +3,7 @@
 from llmwatch.client import WatchClient, watch
 from llmwatch.notice import __version__
 from llmwatch.pricing import PriceTable, load_price_table
-from llmwatch.store import Store
+from llmwatch.store import Store, open_store
 
 __all__ = [
     "PriceTable",
@@ -11,5 +11,6 @@ __all__ = [
     "WatchClient",
     "__version__",
     "load_price_table",
+    "open_store",
     "watch",
 ]

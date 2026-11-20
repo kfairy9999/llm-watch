@@ -6,6 +6,9 @@ services:
     environment:
       LLMWATCH_DB: /data/llmwatch.db
       LLMWATCH_SEED: "1"
+      # Optional. The image does not install pymongo. Unset keeps SQLite.
+      # LLMWATCH_MONGODB_URI: mongodb://host:27017
+      # LLMWATCH_MONGODB_DB: llmwatch
     volumes:
       - watchdata:/data
     healthcheck:
